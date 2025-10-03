@@ -1,0 +1,33 @@
+# This is where we define all the services (containers) we want to run
+services:
+  # First service: Zookeeper. Kafka needs this to store its metadata.
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  # Second service: Kafka itself. This is our message broker.
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    ports:
+      # This is a crucial step. It maps the port on your local machine
+      # to the port inside the container. Format is "HOST_PORT:CONTAINER_PORT".
+      # So, your FastAPI app can talk to "localhost:9092".
+      - "9092:9092"
+    depends_on:
+      # This tells Docker to always start the 'zookeeper' service before starting 'kafka'.
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      # This tells Kafka how other services can connect to it. It's a common point of confusion.
+      # We are defining two "listeners" or addresses for our Kafka broker.
+      # 1. PLAINTEXT://kafka:29092 -> For other containers inside the Docker network.
+      # 2. PLAINTEXT_HOST://localhost:9092 -> For your FastAPI app running on your local machine (the "host").
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
